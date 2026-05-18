@@ -14,8 +14,8 @@ Btor2ToSmt2/
 │   └── Smt2Emitter.cpp / Smt2Emitter.h  # SMT2 file emitter
 ├── build/               # Build directory
 ├── regress/             # Regression tests
-│   ├── test_loader.sh   # Test script
-│   └── Makefile         # Test Makefile
+│   ├── test_regress.sh   # Regression test script
+│   └── Makefile          # Test Makefile
 ```
 
 ## Building
@@ -86,10 +86,27 @@ Node 2: And [width=1] ops=[0, 1] (btor2_id=4)
 
 ```bash
 cd regress
-make test      # Run test suite
-make run       # Run with verbose output
-make clean     # Clean test results
+make test      # Run the test suite
+make run       # Run with verbose output (shows skipped files)
+make clean     # Remove test result files
 ```
+
+### Test Coverage
+
+The regression suite performs **three-layer verification** for each BTOR2 file:
+
+```
+Layer 1 — Loader:  exit code check (no crash)
+Layer 2 — Emitter: SMT2 syntax validation via bitwuzla
+Layer 3 — Semantic: sat/unsat match between BTOR2 and SMT2 via bitwuzla
+```
+
+Results are classified as:
+- **Pass** — all three layers succeed, sat/unsat matches
+- **Skip (unsupported)** — array sorts, overflow ops, parser errors, array read/write
+- **Fail** — unexpected error or semantic mismatch
+
+Requires `bitwuzla` in PATH (semantic checks are skipped if unavailable).
 
 ## Supported BTOR2 Operations
 
@@ -122,22 +139,22 @@ make clean     # Clean test results
 | `sra` | `bvashr` | |
 | `inc` | `bvadd x (_ bv1 w)` | |
 | `dec` | `bvsub x (_ bv1 w)` | |
-| `ult` | `bvult` | |
-| `ulte` | `bvule` | |
-| `ugt` | `bvugt` | |
-| `ugte` | `bvuge` | |
-| `slt` | `bvslt` | |
-| `slte` | `bvsle` | |
-| `sgt` | `bvsgt` | |
-| `sgte` | `bvsge` | |
-| `eq` | `bvcomp` | Returns `BitVec(1)`, not `Bool` |
-| `neq` | `bvnot (bvcomp ...)` | |
-| `iff` | `bvcomp` | |
-| `implies` | `bvor (bvnot a) b` | |
+| `ult` | `(ite (bvult a b) #b1 #b0)` | Comparison → Bool, wrap to `BitVec(1)` |
+| `ulte` | `(ite (bvule a b) #b1 #b0)` | |
+| `ugt` | `(ite (bvugt a b) #b1 #b0)` | |
+| `ugte` | `(ite (bvuge a b) #b1 #b0)` | |
+| `slt` | `(ite (bvslt a b) #b1 #b0)` | |
+| `slte` | `(ite (bvsle a b) #b1 #b0)` | |
+| `sgt` | `(ite (bvsgt a b) #b1 #b0)` | |
+| `sgte` | `(ite (bvsge a b) #b1 #b0)` | |
+| `eq` | `(ite (= a b) #b1 #b0)` | `=` → Bool, wrap to `BitVec(1)` |
+| `neq` | `(ite (= a b) #b0 #b1)` | |
+| `iff` | `(ite (bvcomp a b) #b1 #b0)` | `bvcomp` → `BitVec(1)`, wrap to Bool then `#b1/#b0` |
+| `implies` | `(ite (bvor (bvnot a) b) #b1 #b0)` | `bvor` → Bool, wrap to `BitVec(1)` |
 | `nand` | `bvnot (bvand a b)` | |
 | `nor` | `bvnot (bvor a b)` | |
 | `xnor` | `bvnot (bvxor a b)` | |
-| `ite` | `ite` | |
+| `ite` | `ite` | **Condition must be Bool**; `BitVec(1)` condition needs `(= cond #b1)` |
 | `concat` | `concat` | |
 | `slice` | `((_ extract hi lo) x)` | |
 | `uext` | `((_ zero_extend k) x)` | |

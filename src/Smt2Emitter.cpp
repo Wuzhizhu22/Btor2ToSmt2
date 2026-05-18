@@ -39,10 +39,6 @@ static const char *smt2_op(NodeKind k) {
     return "bvor";
   case NodeKind::Xor:
     return "bvxor";
-  case NodeKind::Eq:
-    return "=";
-  case NodeKind::Ite:
-    return "ite";
   case NodeKind::Concat:
     return "concat";
   case NodeKind::Add:
@@ -105,6 +101,13 @@ emit_nested_binary(const Module &m, int64_t id,
   }
   ss << ")";
   return ss.str();
+}
+
+static bool is_smt_bool_kind(NodeKind k) {
+  return k == NodeKind::Ult || k == NodeKind::Ulte || k == NodeKind::Ugt ||
+         k == NodeKind::Ugte || k == NodeKind::Slt || k == NodeKind::Slte ||
+         k == NodeKind::Sgt || k == NodeKind::Sgte || k == NodeKind::Eq ||
+         k == NodeKind::Neq || k == NodeKind::Iff || k == NodeKind::Implies;
 }
 
 static std::string
@@ -178,14 +181,6 @@ std::string emit_expr(const Module &m, int64_t id,
   case NodeKind::Sll:
   case NodeKind::Srl:
   case NodeKind::Sra:
-  case NodeKind::Ult:
-  case NodeKind::Ulte:
-  case NodeKind::Ugt:
-  case NodeKind::Ugte:
-  case NodeKind::Slt:
-  case NodeKind::Slte:
-  case NodeKind::Sgt:
-  case NodeKind::Sgte:
   case NodeKind::Udiv:
   case NodeKind::Sdiv:
   case NodeKind::Urem:
@@ -193,14 +188,43 @@ std::string emit_expr(const Module &m, int64_t id,
   case NodeKind::Smod:
   case NodeKind::Neg:
   case NodeKind::Concat:
-  case NodeKind::Ite:
     return emit_nested_binary(m, id, names, smt2_op(n.kind));
-  case NodeKind::Eq:
-    return "(bvcomp " + emit_expr(m, n.operands[0], names) + " " +
-           emit_expr(m, n.operands[1], names) + ")";
-  case NodeKind::Neq:
-    return "(bvnot (bvcomp " + emit_expr(m, n.operands[0], names) + " " +
-           emit_expr(m, n.operands[1], names) + "))";
+  case NodeKind::Ite: {
+    const Node &cond_node = m.nodes[n.operands[0]];
+    std::string cond = emit_expr(m, n.operands[0], names);
+    std::string then = emit_expr(m, n.operands[1], names);
+    std::string els = emit_expr(m, n.operands[2], names);
+    if (cond_node.width == 1 && !is_smt_bool_kind(cond_node.kind))
+      cond = "(= " + cond + " #b1)";
+    return "(ite " + cond + " " + then + " " + els + ")";
+  }
+  case NodeKind::Ult:
+  case NodeKind::Ulte:
+  case NodeKind::Ugt:
+  case NodeKind::Ugte:
+  case NodeKind::Slt:
+  case NodeKind::Slte:
+  case NodeKind::Sgt:
+  case NodeKind::Sgte: {
+    std::string expr = emit_nested_binary(m, id, names, smt2_op(n.kind));
+    return "(ite " + expr + " #b1 #b0)";
+  }
+  case NodeKind::Eq: {
+    std::string a = emit_expr(m, n.operands[0], names);
+    std::string b = emit_expr(m, n.operands[1], names);
+    return "(ite (= " + a + " " + b + ") #b1 #b0)";
+  }
+  case NodeKind::Neq: {
+    std::string a = emit_expr(m, n.operands[0], names);
+    std::string b = emit_expr(m, n.operands[1], names);
+    return "(ite (= " + a + " " + b + ") #b0 #b1)";
+  }
+  case NodeKind::Iff:
+    return "(ite (bvcomp " + emit_expr(m, n.operands[0], names) + " " +
+           emit_expr(m, n.operands[1], names) + ") #b1 #b0)";
+  case NodeKind::Implies:
+    return "(ite (bvor (bvnot " + emit_expr(m, n.operands[0], names) + ") " +
+           emit_expr(m, n.operands[1], names) + ") #b1 #b0)";
   case NodeKind::Slice: {
     ss << "((_ extract " << n.param0 << " " << n.param1 << ") "
        << emit_expr(m, n.operands[0], names) << ")";
@@ -215,13 +239,6 @@ std::string emit_expr(const Module &m, int64_t id,
     ss << "((_ sign_extend " << n.param0 << ") "
        << emit_expr(m, n.operands[0], names) << ")";
     return ss.str();
-  }
-  case NodeKind::Iff:
-    return "(bvcomp " + emit_expr(m, n.operands[0], names) + " " +
-           emit_expr(m, n.operands[1], names) + ")";
-  case NodeKind::Implies: {
-    return "(bvor (bvnot " + emit_expr(m, n.operands[0], names) + ") " +
-           emit_expr(m, n.operands[1], names) + ")";
   }
   case NodeKind::Xnor:
     return "(bvnot (bvxor " + emit_expr(m, n.operands[0], names) + " " +

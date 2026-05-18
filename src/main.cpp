@@ -20,8 +20,8 @@ int main(int argc, char **argv) {
         return 1;
       }
     } else if (arg == "-h" || arg == "--help") {
-      std::cerr << "Usage: " << argv[0]
-                << " [options] <input.btor2>" << std::endl;
+      std::cerr << "Usage: " << argv[0] << " [options] <input.btor2>"
+                << std::endl;
       std::cerr << "Options:" << std::endl;
       std::cerr << "  -o <file>        Output SMT2 file path" << std::endl;
       std::cerr << "  -v, --verbose    Enable verbose output" << std::endl;
@@ -33,8 +33,8 @@ int main(int argc, char **argv) {
   }
 
   if (input_file.empty()) {
-    std::cerr << "Usage: " << argv[0]
-              << " [options] <input.btor2>" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " [options] <input.btor2>"
+              << std::endl;
     std::cerr << "Use -h or --help for more information." << std::endl;
     return 1;
   }
@@ -60,9 +60,8 @@ int main(int argc, char **argv) {
     if (verbose) {
       std::cerr << "\n=== Nodes ===" << std::endl;
       for (const auto &node : m.nodes) {
-        std::cerr << "Node " << node.id << ": "
-                  << kind_to_string(node.kind) << " [width=" << node.width
-                  << "]";
+        std::cerr << "Node " << node.id << ": " << kind_to_string(node.kind)
+                  << " [width=" << node.width << "]";
 
         if (!node.name.empty())
           std::cerr << " name=" << node.name;

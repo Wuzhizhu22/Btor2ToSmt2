@@ -12,4 +12,6 @@ add_executable(btor2rw
   src/IR.h
   src/Btor2Loader.cpp
   src/Btor2Loader.h
+  src/Smt2Emitter.cpp
+  src/Smt2Emitter.h
 )

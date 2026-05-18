@@ -1,6 +1,6 @@
 # BTOR2 to SMT2 Converter
 
-A tool for loading and processing BTOR2 format files.
+A tool for loading BTOR2 format files and emitting SMT-LIB 2 files.
 
 ## Project Structure
 
@@ -10,11 +10,12 @@ Btor2ToSmt2/
 ├── src/                 # Source code
 │   ├── main.cpp
 │   ├── IR.cpp / IR.h    # Intermediate representation
-│   └── Btor2Loader.cpp / Btor2Loader.h  # BTOR2 file loader
+│   ├── Btor2Loader.cpp / Btor2Loader.h  # BTOR2 file loader
+│   └── Smt2Emitter.cpp / Smt2Emitter.h  # SMT2 file emitter
 ├── build/               # Build directory
-├── regress/            # Regression tests
-    ├── test_loader.sh  # Test script
-    └── Makefile        # Test Makefile
+├── regress/             # Regression tests
+│   ├── test_loader.sh   # Test script
+│   └── Makefile         # Test Makefile
 ```
 
 ## Building
@@ -31,12 +32,14 @@ The binary will be created at `build/btor2rw`.
 ## Usage
 
 ```bash
-# Basic usage - loads and prints summary
+# Load and emit SMT2 output
+./build/btor2rw <input.btor2> -o <output.smt2>
+
+# Load only (print summary)
 ./build/btor2rw <input.btor2>
 
 # Verbose mode - prints all node details
-./build/btor2rw -v <input.btor2>
-./build/btor2rw --verbose <input.btor2>
+./build/btor2rw -v <input.btor2> -o <output.smt2>
 
 # Show help
 ./build/btor2rw -h
@@ -47,6 +50,7 @@ The binary will be created at `build/btor2rw`.
 
 | Option | Description |
 |--------|-------------|
+| `-o <file>` | Output SMT2 file path |
 | `-v`, `--verbose` | Enable verbose output (print all nodes) |
 | `-h`, `--help` | Show help message |
 
@@ -59,6 +63,7 @@ Total nodes:    120371
 Inputs:         15
 Constraints:    1
 Bads:           1
+SMT2 emitted to: out.smt2
 ```
 
 **Verbose mode** (includes node details):
@@ -68,6 +73,7 @@ Total nodes:    5
 Inputs:         2
 Constraints:    1
 Bads:           1
+SMT2 emitted to: out.smt2
 
 === Nodes ===
 Node 0: Input [width=1] name=input1 (btor2_id=2)
@@ -92,6 +98,57 @@ make clean     # Clean test results
 - **Binary**: `and`, `or`, `xor`, `xnor`, `nand`, `nor`, `add`, `sub`, `mul`, `udiv`, `sdiv`, `urem`, `srem`, `smod`, `sll`, `srl`, `sra`, `rol`, `ror`
 - **Comparison**: `eq`, `neq`, `ult`, `ulte`, `ugt`, `ugte`, `slt`, `slte`, `sgt`, `sgte`
 - **Misc**: `ite`, `concat`, `slice`, `uext`, `sext`, `iff`, `implies`
+
+## SMT2 Output Mapping
+
+| BTOR2 | SMT-LIB | Notes |
+|-------|---------|-------|
+| `const/constd/consth/zero/one/ones` | `#b...` | Binary literal |
+| `not` | `bvnot` | |
+| `and` | `bvand` | |
+| `or` | `bvor` | |
+| `xor` | `bvxor` | |
+| `add` | `bvadd` | |
+| `sub` | `bvsub` | |
+| `mul` | `bvmul` | |
+| `udiv` | `bvudiv` | |
+| `sdiv` | `bvsdiv` | |
+| `urem` | `bvurem` | |
+| `srem` | `bvsrem` | |
+| `smod` | `bvsmod` | |
+| `neg` | `bvneg` | |
+| `sll` | `bvshl` | |
+| `srl` | `bvlshr` | |
+| `sra` | `bvashr` | |
+| `inc` | `bvadd x (_ bv1 w)` | |
+| `dec` | `bvsub x (_ bv1 w)` | |
+| `ult` | `bvult` | |
+| `ulte` | `bvule` | |
+| `ugt` | `bvugt` | |
+| `ugte` | `bvuge` | |
+| `slt` | `bvslt` | |
+| `slte` | `bvsle` | |
+| `sgt` | `bvsgt` | |
+| `sgte` | `bvsge` | |
+| `eq` | `bvcomp` | Returns `BitVec(1)`, not `Bool` |
+| `neq` | `bvnot (bvcomp ...)` | |
+| `iff` | `bvcomp` | |
+| `implies` | `bvor (bvnot a) b` | |
+| `nand` | `bvnot (bvand a b)` | |
+| `nor` | `bvnot (bvor a b)` | |
+| `xnor` | `bvnot (bvxor a b)` | |
+| `ite` | `ite` | |
+| `concat` | `concat` | |
+| `slice` | `((_ extract hi lo) x)` | |
+| `uext` | `((_ zero_extend k) x)` | |
+| `sext` | `((_ sign_extend k) x)` | |
+| `redand` | `bvredand` | |
+| `redor` | `bvredor` | |
+| `redxor` | Handled via extract/xor | |
+| `rol` | `bvor (bvshl ...) (bvlshr ...)` | |
+| `ror` | `bvor (bvlshr ...) (bvshl ...)` | |
+| `constraint` | `(assert (= <expr> #b1))` | |
+| `bad` | `(assert (= <expr> #b1))` | |
 
 ## Unsupported Features
 

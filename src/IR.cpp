@@ -1,0 +1,105 @@
+#include "IR.h"
+
+std::string kind_to_string(NodeKind k) {
+  switch (k) {
+  case NodeKind::Input:
+    return "Input";
+  case NodeKind::Const:
+    return "Const";
+  case NodeKind::Not:
+    return "Not";
+  case NodeKind::And:
+    return "And";
+  case NodeKind::Or:
+    return "Or";
+  case NodeKind::Xor:
+    return "Xor";
+  case NodeKind::Eq:
+    return "Eq";
+  case NodeKind::Neq:
+    return "Neq";
+  case NodeKind::Ite:
+    return "Ite";
+  case NodeKind::Concat:
+    return "Concat";
+  case NodeKind::Slice:
+    return "Slice";
+  case NodeKind::Uext:
+    return "Uext";
+  case NodeKind::Sext:
+    return "Sext";
+  case NodeKind::Add:
+    return "Add";
+  case NodeKind::Sub:
+    return "Sub";
+  case NodeKind::Mul:
+    return "Mul";
+  case NodeKind::Sll:
+    return "Sll";
+  case NodeKind::Srl:
+    return "Srl";
+  case NodeKind::Sra:
+    return "Sra";
+  case NodeKind::Ult:
+    return "Ult";
+  case NodeKind::Ulte:
+    return "Ulte";
+  case NodeKind::Ugt:
+    return "Ugt";
+  case NodeKind::Ugte:
+    return "Ugte";
+  case NodeKind::Slt:
+    return "Slt";
+  case NodeKind::Slte:
+    return "Slte";
+  case NodeKind::Sgt:
+    return "Sgt";
+  case NodeKind::Sgte:
+    return "Sgte";
+  case NodeKind::Constraint:
+    return "Constraint";
+  case NodeKind::Bad:
+    return "Bad";
+  case NodeKind::Udiv:
+    return "Udiv";
+  case NodeKind::Sdiv:
+    return "Sdiv";
+  case NodeKind::Urem:
+    return "Urem";
+  case NodeKind::Srem:
+    return "Srem";
+  case NodeKind::Smod:
+    return "Smod";
+  case NodeKind::Inc:
+    return "Inc";
+  case NodeKind::Dec:
+    return "Dec";
+  case NodeKind::Neg:
+    return "Neg";
+  case NodeKind::RedAnd:
+    return "RedAnd";
+  case NodeKind::RedOr:
+    return "RedOr";
+  case NodeKind::RedXor:
+    return "RedXor";
+  case NodeKind::Iff:
+    return "Iff";
+  case NodeKind::Implies:
+    return "Implies";
+  case NodeKind::Nand:
+    return "Nand";
+  case NodeKind::Nor:
+    return "Nor";
+  case NodeKind::Xnor:
+    return "Xnor";
+  case NodeKind::Rol:
+    return "Rol";
+  case NodeKind::Ror:
+    return "Ror";
+  }
+  return "Unknown";
+}
+
+bool is_bool_width(int64_t w) { return w == 1; }
+
+bool is_bool_node(const Node &n) { return n.width == 1; }

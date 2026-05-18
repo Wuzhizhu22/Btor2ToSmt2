@@ -31,7 +31,49 @@ The binary will be created at `build/btor2rw`.
 ## Usage
 
 ```bash
+# Basic usage - loads and prints summary
 ./build/btor2rw <input.btor2>
+
+# Verbose mode - prints all node details
+./build/btor2rw -v <input.btor2>
+./build/btor2rw --verbose <input.btor2>
+
+# Show help
+./build/btor2rw -h
+./build/btor2rw --help
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-v`, `--verbose` | Enable verbose output (print all nodes) |
+| `-h`, `--help` | Show help message |
+
+### Output
+
+**Default mode** (summary only):
+```
+=== BTOR2 Loaded Successfully ===
+Total nodes:    120371
+Inputs:         15
+Constraints:    1
+Bads:           1
+```
+
+**Verbose mode** (includes node details):
+```
+=== BTOR2 Loaded Successfully ===
+Total nodes:    5
+Inputs:         2
+Constraints:    1
+Bads:           1
+
+=== Nodes ===
+Node 0: Input [width=1] name=input1 (btor2_id=2)
+Node 1: Input [width=1] name=input2 (btor2_id=3)
+Node 2: And [width=1] ops=[0, 1] (btor2_id=4)
+...
 ```
 
 ## Running Tests

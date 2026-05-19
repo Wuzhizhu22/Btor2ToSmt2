@@ -318,7 +318,7 @@ static void emit_rhs(std::ostream &out, const Module &m, const Node &n,
 
   case NodeKind::Ite: {
     const Node &cond_node = m.nodes[n.operands[0]];
-    if (cond_node.width == 1 && !is_smt_bool_kind(cond_node.kind)) {
+    if (cond_node.width == 1) {
       out << "(ite (= ";
       emit_node_ref(out, m, n.operands[0], names);
       out << " #b1) ";
@@ -371,20 +371,20 @@ static void emit_rhs(std::ostream &out, const Module &m, const Node &n,
   }
 
   case NodeKind::Iff: {
-    out << "(ite (bvcomp ";
+    out << "(ite (= (bvcomp ";
     emit_node_ref(out, m, n.operands[0], names);
     out << " ";
     emit_node_ref(out, m, n.operands[1], names);
-    out << ") #b1 #b0)";
+    out << ") #b1) #b1 #b0)";
     break;
   }
 
   case NodeKind::Implies: {
-    out << "(ite (bvor (bvnot ";
+    out << "(ite (= (bvor (bvnot ";
     emit_node_ref(out, m, n.operands[0], names);
     out << ") ";
     emit_node_ref(out, m, n.operands[1], names);
-    out << ") #b1 #b0)";
+    out << ") #b1) #b1 #b0)";
     break;
   }
 
@@ -591,13 +591,27 @@ static void emit_asserts(std::ostream &out, const Module &m,
     out << " #b1))\n";
   }
 
-  for (int64_t ir_id : m.bads) {
-    const Node &n = m.nodes[ir_id];
-    if (n.operands.empty())
-      continue;
-    out << "(assert (= ";
-    emit_node_ref(out, m, n.operands[0], names);
-    out << " #b1))\n";
+  if (m.bads.empty())
+    return;
+
+  if (m.bads.size() == 1) {
+    const Node &n = m.nodes[m.bads[0]];
+    if (!n.operands.empty()) {
+      out << "(assert (= ";
+      emit_node_ref(out, m, n.operands[0], names);
+      out << " #b1))\n";
+    }
+  } else {
+    out << "(assert (or";
+    for (int64_t ir_id : m.bads) {
+      const Node &n = m.nodes[ir_id];
+      if (n.operands.empty())
+        continue;
+      out << " (= ";
+      emit_node_ref(out, m, n.operands[0], names);
+      out << " #b1)";
+    }
+    out << "))\n";
   }
 }
 

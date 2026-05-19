@@ -3,6 +3,25 @@
 
 #include <iostream>
 
+/**
+ * @brief 程序主入口函数，协调BTOR2到SMT2的完整转换流程
+ *
+ * 该函数是Btor2ToSmt2工具的入口点，负责命令行参数解析并协调整个转换流程。
+ * 程序遵循标准的"加载-转换-输出"模式：
+ * 1. 命令行解析：处理-v/--verbose、-o输出文件、-h/--help以及输入文件路径
+ * 2. BTOR2加载：调用Btor2Loader::load_from_file将文件解析为Module结构
+ * 3. 转换执行：调用Smt2Emitter::emit_to_string或emit_to_file生成SMT2格式输出
+ * 4. 调试输出：在verbose模式下输出模块的统计信息和所有节点的详细信息
+ *
+ * 支持的命令行选项：
+ * - -o <file>: 指定SMT2输出文件路径
+ * - -v, --verbose: 启用详细输出
+ * - -h, --help: 显示帮助信息
+ *
+ * @param argc 命令行参数个数
+ * @param argv 命令行参数数组
+ * @return 程序退出码，0表示成功，1表示错误
+ */
 int main(int argc, char **argv) {
   bool verbose = false;
   std::string input_file;

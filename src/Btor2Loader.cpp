@@ -8,6 +8,21 @@
 #include <stdexcept>
 #include <unordered_map>
 
+/**
+ * @brief 十进制字符串到二进制字符串转换函数，在BTOR2解析过程中将十进制常量转换为位向量二进制表示
+ *
+ * 该函数是BTOR2解析器处理constd指令（十进制常量）的核心辅助函数。
+ * BTOR2格式支持以十进制和十六进制表示常量，此函数负责将十进制字符串转换为固定宽度的二进制字符串。
+ * 转换过程采用除2取余法模拟二进制除法运算。对于负数，采用二进制补码表示法：
+ * 1. 先将绝对值转换为二进制
+ * 2. 按位取反
+ * 3. 加1得到补码
+ * 最终结果会被填充或截断至指定的width宽度。
+ *
+ * @param dec_str 十进制数字字符串，可能包含负号前缀
+ * @param width 目标位向量宽度
+ * @return 转换后的二进制字符串表示
+ */
 static std::string dec_to_bin_str(const std::string &dec_str, int64_t width) {
   std::string bits;
   std::string val = dec_str;
@@ -60,6 +75,19 @@ static std::string dec_to_bin_str(const std::string &dec_str, int64_t width) {
   return bits;
 }
 
+/**
+ * @brief 十六进制字符串到二进制字符串转换函数，在BTOR2解析过程中将十六进制常量转换为位向量二进制表示
+ *
+ * 该函数是BTOR2解析器处理consth指令（十六进制常量）的核心辅助函数。
+ * 十六进制数字到二进制的转换通过查表实现：每个十六进制字符（0-9, a-f, A-F）
+ * 对应4位二进制表示（0000-1111）。函数遍历十六进制字符串的每个字符，
+ * 查表获取对应的4位二进制片段，最后根据width参数进行填充或截断。
+ *
+ * @param hex_str 十六进制数字字符串，支持大小写
+ * @param width 目标位向量宽度
+ * @return 转换后的二进制字符串表示
+ * @throws std::runtime_error 遇到无效的十六进制字符时抛出
+ */
 static std::string hex_to_bin_str(const std::string &hex_str, int64_t width) {
   static const std::string hex_to_bin[16] = {
       "0000", "0001", "0010", "0011", "0100", "0101", "0110", "0111",
@@ -86,6 +114,17 @@ static std::string hex_to_bin_str(const std::string &hex_str, int64_t width) {
   return bits;
 }
 
+/**
+ * @brief 位向量填充或截断函数，在常量解析过程中确保位字符串符合指定宽度要求
+ *
+ * 该函数是BTOR2常量解析的辅助函数，负责将位字符串调整为指定的宽度。
+ * 当位字符串长度大于width时，从低位截断多余部分；当长度小于width时，
+ * 在高位填充0以达到指定宽度。这确保了后续处理中所有位向量具有统一的长度表示。
+ *
+ * @param bits 原始位字符串，通常来自常量解析
+ * @param width 目标位向量宽度
+ * @return 调整后的位字符串，长度恰好等于width
+ */
 static std::string pad_or_trunc(const std::string &bits, int64_t width) {
   if (static_cast<int64_t>(bits.size()) > width)
     return bits.substr(bits.size() - width);
@@ -94,6 +133,28 @@ static std::string pad_or_trunc(const std::string &bits, int64_t width) {
   return bits;
 }
 
+/**
+ * @brief BTOR2文件加载与解析函数，在项目整体流程中作为数据导入的核心入口
+ *
+ * 该函数是Btor2Loader类的核心公有方法，负责将BTOR2格式的文件加载并解析为内部的Module结构。
+ * 这是项目数据流的第一阶段——从外部文件格式到内部中间表示（IR）的转换。
+ * 解析过程包括：
+ * 1. 文件I/O：打开并逐行读取BTOR2文件
+ * 2. 词法解析：将每行分割为标记（token）流
+ * 3. 命令处理：识别sort、input、const、constd、consth、zero、one、ones、bad、constraint等命令
+ * 4. 节点构建：为每条命令创建对应的IR节点，建立BTOR2 ID到IR ID的映射
+ * 5. 操作数解析：处理负ID表示的隐式取反操作
+ *
+ * 函数内部定义了多个lambda辅助函数：
+ * - add_node: 向模块添加节点并分配IR ID
+ * - resolve_operand: 解析操作数ID，处理负ID的取反情况
+ * - get_width: 从sort_map获取位向量宽度
+ * - map_op: 将BTOR2操作符字符串映射到NodeKind枚举
+ *
+ * @param path 要加载的BTOR2文件路径
+ * @return 解析后生成的Module对象，包含所有节点、输入、约束和bad状态
+ * @throws std::runtime_error 文件无法打开或遇到无效格式时抛出
+ */
 Module Btor2Loader::load_from_file(const std::string &path) {
   std::ifstream file(path);
   if (!file.is_open())

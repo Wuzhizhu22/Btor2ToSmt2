@@ -3,11 +3,13 @@
 
 #include "IR.h"
 
+#include <iosfwd>
 #include <string>
 
 class Smt2Emitter {
 public:
   void emit_to_file(const Module &m, const std::string &path);
+  void emit_to_stream(const Module &m, std::ostream &out);
   std::string emit_to_string(const Module &m);
 };
 

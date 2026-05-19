@@ -21,10 +21,11 @@ Btor2ToSmt2/
 ## Building
 
 ```bash
-mkdir -p build
-cd build
-cmake ..
-make
+make build         # Build the project (cmake + make)
+make test          # Run the regression test suite
+make test-verbose  # Run with verbose output (shows skipped files)
+make clean         # Remove build and test result files
+make help          # Show all available targets
 ```
 
 The binary will be created at `build/btor2rw`.
@@ -80,15 +81,6 @@ Node 0: Input [width=1] name=input1 (btor2_id=2)
 Node 1: Input [width=1] name=input2 (btor2_id=3)
 Node 2: And [width=1] ops=[0, 1] (btor2_id=4)
 ...
-```
-
-## Running Tests
-
-```bash
-cd regress
-make test      # Run the test suite
-make run       # Run with verbose output (shows skipped files)
-make clean     # Remove test result files
 ```
 
 ### Test Coverage

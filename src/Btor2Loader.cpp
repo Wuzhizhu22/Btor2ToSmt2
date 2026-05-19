@@ -9,7 +9,8 @@
 #include <unordered_map>
 
 /**
- * @brief 十进制字符串到二进制字符串转换函数，在BTOR2解析过程中将十进制常量转换为位向量二进制表示
+ * @brief
+ * 十进制字符串到二进制字符串转换函数，在BTOR2解析过程中将十进制常量转换为位向量二进制表示
  *
  * 该函数是BTOR2解析器处理constd指令（十进制常量）的核心辅助函数。
  * BTOR2格式支持以十进制和十六进制表示常量，此函数负责将十进制字符串转换为固定宽度的二进制字符串。
@@ -76,7 +77,8 @@ static std::string dec_to_bin_str(const std::string &dec_str, int64_t width) {
 }
 
 /**
- * @brief 十六进制字符串到二进制字符串转换函数，在BTOR2解析过程中将十六进制常量转换为位向量二进制表示
+ * @brief
+ * 十六进制字符串到二进制字符串转换函数，在BTOR2解析过程中将十六进制常量转换为位向量二进制表示
  *
  * 该函数是BTOR2解析器处理consth指令（十六进制常量）的核心辅助函数。
  * 十六进制数字到二进制的转换通过查表实现：每个十六进制字符（0-9, a-f, A-F）
@@ -141,7 +143,8 @@ static std::string pad_or_trunc(const std::string &bits, int64_t width) {
  * 解析过程包括：
  * 1. 文件I/O：打开并逐行读取BTOR2文件
  * 2. 词法解析：将每行分割为标记（token）流
- * 3. 命令处理：识别sort、input、const、constd、consth、zero、one、ones、bad、constraint等命令
+ * 3.
+ * 命令处理：识别sort、input、const、constd、consth、zero、one、ones、bad、constraint等命令
  * 4. 节点构建：为每条命令创建对应的IR节点，建立BTOR2 ID到IR ID的映射
  * 5. 操作数解析：处理负ID表示的隐式取反操作
  *

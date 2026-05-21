@@ -14,7 +14,7 @@ Btor2ToSmt2/
 │   └── Smt2Emitter.cpp / Smt2Emitter.h  # SMT2 file emitter
 ├── build/               # Build directory
 ├── regress/             # Regression tests
-│   ├── test_regress.sh   # Regression test script
+│   ├── test_regress.sh   # Unified regression test script (-s <solver>)
 │   └── Makefile          # Test Makefile
 ```
 
@@ -22,13 +22,41 @@ Btor2ToSmt2/
 
 ```bash
 make build         # Build the project (cmake + make)
-make test          # Run the regression test suite
+make test          # Run the regression test suite (default: bitwuzla)
 make test-verbose  # Run with verbose output (shows skipped files)
 make clean         # Remove build and test result files
 make help          # Show all available targets
 ```
 
 The binary will be created at `build/btor2rw`.
+
+### Regression Test Suite
+
+The unified test script supports multiple SMT2 solvers via `-s`:
+
+```bash
+# Default: bitwuzla (both reference and SMT2 solver)
+./regress/test_regress.sh
+
+# Z3 as SMT2 solver
+./regress/test_regress.sh -s z3
+
+# cvc5 as SMT2 solver
+./regress/test_regress.sh -s cvc5
+
+# Yices as SMT2 solver
+./regress/test_regress.sh -s yices
+```
+
+**Common options:**
+
+| Option | Description |
+|--------|-------------|
+| `-s`, `--solver <name>` | SMT2 solver: `bitwuzla` (default), `z3`, `cvc5`, `yices` |
+| `-t <seconds>` | SMT2 solver timeout per case (default: 30) |
+| `-b <seconds>` | BTOR2 reference timeout per case (default: 60) |
+| `-d`, `--debug` | Debug mode — stops on first failure or mismatch |
+| `-v`, `--verbose` | Verbose mode — lists all skipped files |
 
 ## Usage
 
@@ -94,20 +122,38 @@ Node 2: And [width=1] ops=[0, 1] (btor2_id=4)
 
 ### Test Coverage
 
-The regression suite performs **three-layer verification** for each BTOR2 file:
+The regression suite performs **semantic equivalence verification** for each BTOR2 file:
 
 ```
-Layer 1 — Loader:  exit code check (no crash)
-Layer 2 — Emitter: SMT2 syntax validation via bitwuzla
-Layer 3 — Semantic: sat/unsat match between BTOR2 and SMT2 via bitwuzla
+1. BTOR2 → SMT2 conversion (btor2rw)
+2. BTOR2 reference: bitwuzla --lang btor2 → sat/unsat
+3. SMT2 solving:         selected solver → sat/unsat
+4. Compare reference vs. SMT2 result
 ```
 
 Results are classified as:
-- **Pass** — all three layers succeed, sat/unsat matches
-- **Skip (unsupported)** — array sorts, overflow ops, parser errors, array read/write
-- **Fail** — unexpected error or semantic mismatch
 
-Requires `bitwuzla` in PATH (semantic checks are skipped if unavailable).
+| Mark | Category | Meaning |
+|:---:|------|------|
+| `.` | **Pass** | Semantic match — reference and SMT2 agree |
+| `S` | **Skip (unsupported)** | btor2rw doesn't support this feature |
+| `T` | **Skip (BTOR2 timeout)** | bitwuzla reference timed out |
+| `X` | **Skip (BTOR2 error)** | bitwuzla reference returned an error |
+| `P` | **Skip (SMT2 timeout)** | SMT2 solver timed out |
+| `E` | **Skip (SMT2 error)** | SMT2 solver rejected the syntax |
+| `F` | **Fail** | btor2rw error or empty output |
+| `M` | **Fail** | Semantic mismatch — results differ |
+
+**Semantic match rate** is calculated only on cases with a valid reference:
+```
+match_rate = pass / (total - unsupported - BTOR2_timeout - BTOR2_error)
+```
+
+### Bitwuzla Reference Timeout
+
+Some BTOR2 test cases (e.g., `lazyitex.btor2`, `rw60.btor2`) have highly variable bitwuzla solving times
+in BTOR2 mode. The default 60-second BTOR2 reference timeout may occasionally skip these cases with `T`.
+Adjust with `-b` if needed.
 
 ## Supported BTOR2 Operations
 

@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <unordered_set>
 
-using NameMap = std::unordered_map<int64_t, std::string>;
+Smt2Emitter::Smt2Emitter(Smt2EmitterOptions options) : d_options(options) {}
 
 /* ========================================================================
  *  Utility helpers
@@ -48,6 +48,10 @@ static std::string make_safe_name(const std::string &raw, int64_t id,
       if (!ok)
         c = '_';
     }
+  }
+
+  if (!base.empty() && base[0] >= '0' && base[0] <= '9') {
+    base = "v_" + base;
   }
 
   std::string name = base;
@@ -286,8 +290,8 @@ static void emit_node_ref(std::ostream &out, const Module &m, int64_t node_id,
  * @param names 节点名称映射表
  * @throws std::runtime_error 若遇到当前版本尚未支持的NodeKind
  */
-static void emit_rhs(std::ostream &out, const Module &m, const Node &n,
-                     const NameMap &names) {
+void Smt2Emitter::emit_rhs(std::ostream &out, const Module &m, const Node &n,
+                           const NameMap &names) {
   switch (n.kind) {
   case NodeKind::Not:
   case NodeKind::And:
@@ -437,16 +441,30 @@ static void emit_rhs(std::ostream &out, const Module &m, const Node &n,
   }
 
   case NodeKind::RedAnd: {
-    out << "(bvredand ";
-    emit_node_ref(out, m, n.operands[0], names);
-    out << ")";
+    if (d_options.strict_smtlib) {
+      const Node &op = m.nodes[n.operands[0]];
+      out << "(ite (= ";
+      emit_node_ref(out, m, n.operands[0], names);
+      out << " (bvnot (_ bv0 " << op.width << "))) #b1 #b0)";
+    } else {
+      out << "(bvredand ";
+      emit_node_ref(out, m, n.operands[0], names);
+      out << ")";
+    }
     break;
   }
 
   case NodeKind::RedOr: {
-    out << "(bvredor ";
-    emit_node_ref(out, m, n.operands[0], names);
-    out << ")";
+    if (d_options.strict_smtlib) {
+      const Node &op = m.nodes[n.operands[0]];
+      out << "(ite (distinct ";
+      emit_node_ref(out, m, n.operands[0], names);
+      out << " (_ bv0 " << op.width << ")) #b1 #b0)";
+    } else {
+      out << "(bvredor ";
+      emit_node_ref(out, m, n.operands[0], names);
+      out << ")";
+    }
     break;
   }
 
@@ -547,8 +565,8 @@ static void emit_rhs(std::ostream &out, const Module &m, const Node &n,
  * @param n 当前要输出定义的节点
  * @param names 节点名称映射表
  */
-static void emit_node_definition(std::ostream &out, const Module &m,
-                                 const Node &n, const NameMap &names) {
+void Smt2Emitter::emit_node_definition(std::ostream &out, const Module &m,
+                                       const Node &n, const NameMap &names) {
   auto it = names.find(n.id);
   if (it == names.end())
     return;
@@ -580,8 +598,8 @@ static void emit_node_definition(std::ostream &out, const Module &m,
  * @param m 当前模块对象
  * @param names 节点名称映射表
  */
-static void emit_asserts(std::ostream &out, const Module &m,
-                         const NameMap &names) {
+void Smt2Emitter::emit_asserts(std::ostream &out, const Module &m,
+                               const NameMap &names) {
   for (int64_t ir_id : m.constraints) {
     const Node &n = m.nodes[ir_id];
     if (n.operands.empty())
@@ -664,11 +682,11 @@ void Smt2Emitter::emit_to_stream(const Module &m, std::ostream &out) {
     case NodeKind::Bad:
       continue;
     default:
-      emit_node_definition(out, m, n, names);
+      this->emit_node_definition(out, m, n, names);
     }
   }
 
-  emit_asserts(out, m, names);
+  this->emit_asserts(out, m, names);
   out << "(check-sat)\n";
 }
 

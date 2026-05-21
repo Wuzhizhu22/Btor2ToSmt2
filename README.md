@@ -53,7 +53,16 @@ The binary will be created at `build/btor2rw`.
 |--------|-------------|
 | `-o <file>` | Output SMT2 file path |
 | `-v`, `--verbose` | Enable verbose output (print all nodes) |
+| `--no-strict-smtlib` | Allow solver-extended constructs |
 | `-h`, `--help` | Show help message |
+
+### Strict SMT-LIB Mode
+
+By default, the converter emits only standard SMT-LIB `QF_BV` constructs for maximum cross-solver compatibility. Reduction operations are lowered to:
+- `redand`: `(ite (= x ALL_ONES_w) #b1 #b0)`
+- `redor`: `(ite (distinct x (_ bv0 w)) #b1 #b0)`
+
+To allow solver-extended constructs like `bvredor` and `bvredand` (e.g., for Bitwuzla), use the `--no-strict-smtlib` flag.
 
 ### Output
 
@@ -151,8 +160,8 @@ Requires `bitwuzla` in PATH (semantic checks are skipped if unavailable).
 | `slice` | `((_ extract hi lo) x)` | |
 | `uext` | `((_ zero_extend k) x)` | |
 | `sext` | `((_ sign_extend k) x)` | |
-| `redand` | `bvredand` | |
-| `redor` | `bvredor` | |
+| `redand` | `(ite (= x ALL_ONES_w) #b1 #b0)` | Use `--no-strict-smtlib` to emit `bvredand` |
+| `redor` | `(ite (distinct x (_ bv0 w)) #b1 #b0)` | Use `--no-strict-smtlib` to emit `bvredor` |
 | `redxor` | Handled via extract/xor | |
 | `rol` | `bvor (bvshl ...) (bvlshr ...)` | |
 | `ror` | `bvor (bvlshr ...) (bvshl ...)` | |

@@ -24,6 +24,7 @@
  */
 int main(int argc, char **argv) {
   bool verbose = false;
+  bool strict_smtlib = true;
   std::string input_file;
   std::string output_file;
 
@@ -31,6 +32,8 @@ int main(int argc, char **argv) {
     std::string arg = argv[i];
     if (arg == "-v" || arg == "--verbose") {
       verbose = true;
+    } else if (arg == "--no-strict-smtlib") {
+      strict_smtlib = false;
     } else if (arg == "-o") {
       if (i + 1 < argc) {
         output_file = argv[++i];
@@ -42,9 +45,11 @@ int main(int argc, char **argv) {
       std::cerr << "Usage: " << argv[0] << " [options] <input.btor2>"
                 << std::endl;
       std::cerr << "Options:" << std::endl;
-      std::cerr << "  -o <file>        Output SMT2 file path" << std::endl;
-      std::cerr << "  -v, --verbose    Enable verbose output" << std::endl;
-      std::cerr << "  -h, --help       Show this help message" << std::endl;
+      std::cerr << "  -o <file>            Output SMT2 file path" << std::endl;
+      std::cerr << "  -v, --verbose        Enable verbose output" << std::endl;
+      std::cerr << "  --no-strict-smtlib   Allow solver-extended constructs"
+                << std::endl;
+      std::cerr << "  -h, --help           Show this help message" << std::endl;
       return 0;
     } else if (input_file.empty()) {
       input_file = arg;
@@ -71,7 +76,7 @@ int main(int argc, char **argv) {
     std::cerr << "Bads:           " << m.bads.size() << std::endl;
 
     if (!output_file.empty()) {
-      Smt2Emitter emitter;
+      Smt2Emitter emitter({.strict_smtlib = strict_smtlib});
       emitter.emit_to_file(m, output_file);
       std::cerr << "SMT2 emitted to: " << output_file << std::endl;
     }

@@ -41,10 +41,10 @@ static std::string make_safe_name(const std::string &raw, int64_t id,
     base = raw;
     for (auto &c : base) {
       bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                (c >= '0' && c <= '9') || c == '~' || c == '!' || c == '@' ||
+                (c >= '0' && c <= '9') || c == '~' || c == '!' ||
                 c == '$' || c == '%' || c == '^' || c == '&' || c == '*' ||
                 c == '_' || c == '-' || c == '+' || c == '=' || c == '<' ||
-                c == '>' || c == '.' || c == '?' || c == '/';
+                c == '>' || c == '?' || c == '/';
       if (!ok)
         c = '_';
     }

@@ -21,11 +21,12 @@ Btor2ToSmt2/
 ## Building
 
 ```bash
-make build         # Build the project (cmake + make)
-make test          # Run the regression test suite (default: bitwuzla)
-make test-verbose  # Run with verbose output (shows skipped files)
-make clean         # Remove build and test result files
-make help          # Show all available targets
+make build             # Build the project (cmake + make)
+make test              # Run the regression test suite (default: bitwuzla)
+make test-verbose      # Run with verbose output (shows skipped files)
+make test_all_solvers  # Run tests for all solvers (bitwuzla, z3, cvc5, yices)
+make clean             # Remove build and test result files
+make help              # Show all available targets
 ```
 
 The binary will be created at `build/btor2rw`.

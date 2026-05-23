@@ -13,6 +13,7 @@ Smt2Emitter::Smt2Emitter(Smt2EmitterOptions options) : d_options(options) {}
 
 /**
  * @brief
+ * @brief
  * 名称安全化函数，在项目整体流程中负责将原始节点名称转换为合法且唯一的SMT2标识符
  *
  * 该函数属于Smt2Emitter文件中的基础辅助函数，位于SMT2文本生成流程的最前端。
@@ -599,7 +600,7 @@ void Smt2Emitter::emit_node_definition(std::ostream &out, const Module &m,
  * @param names 节点名称映射表
  */
 void Smt2Emitter::emit_asserts(std::ostream &out, const Module &m,
-                               const NameMap &names) {
+                               const NameMap &names, int64_t bad_filter) {
   for (int64_t ir_id : m.constraints) {
     const Node &n = m.nodes[ir_id];
     if (n.operands.empty())
@@ -612,14 +613,14 @@ void Smt2Emitter::emit_asserts(std::ostream &out, const Module &m,
   if (m.bads.empty())
     return;
 
-  if (m.bads.size() == 1) {
-    const Node &n = m.nodes[m.bads[0]];
+  if (bad_filter >= 0) {
+    const Node &n = m.nodes[m.bads[bad_filter]];
     if (!n.operands.empty()) {
       out << "(assert (= ";
       emit_node_ref(out, m, n.operands[0], names);
       out << " #b1))\n";
     }
-  } else {
+  } else if (d_options.use_or_assert && m.bads.size() > 1) {
     out << "(assert (or";
     for (int64_t ir_id : m.bads) {
       const Node &n = m.nodes[ir_id];
@@ -630,6 +631,15 @@ void Smt2Emitter::emit_asserts(std::ostream &out, const Module &m,
       out << " #b1)";
     }
     out << "))\n";
+  } else {
+    for (int64_t ir_id : m.bads) {
+      const Node &n = m.nodes[ir_id];
+      if (n.operands.empty())
+        continue;
+      out << "(assert (= ";
+      emit_node_ref(out, m, n.operands[0], names);
+      out << " #b1))\n";
+    }
   }
 }
 
@@ -733,6 +743,65 @@ void Smt2Emitter::emit_to_file(const Module &m, const std::string &path) {
     throw std::runtime_error("Cannot open output file: " + path);
 
   emit_to_stream(m, file);
+
+  if (!file.good())
+    throw std::runtime_error("Failed to write to output file: " + path);
+}
+
+/**
+ * @brief
+ * 单个bad节点专用文件输出函数，在项目整体流程中为指定bad索引生成独立的SMT2文件
+ *
+ * 该函数是emit_to_file的变体，用于在非use_or_assert默认模式下为每个bad节点
+ * 生成独立的SMT2文件。与emit_to_file不同，该函数仅在顶层断言中输出指定bad_index
+ * 对应的单个bad断言，而非所有bad断言。文件内容结构与其他emit接口保持一致：
+ * 1. Header：输出(set-logic QF_BV)和状态信息
+ * 2. Input declarations：为输入节点生成declare-const
+ * 3. Derived node definitions：为中间节点生成define-fun
+ * 4. Constraints：输出所有约束
+ * 5. Single bad assert：只输出指定bad_index索引的bad断言
+ *
+ * @param m 已加载并解析完成的BTOR2模块对象
+ * @param bad_index 要输出的bad节点在m.bads中的索引
+ * @param path 目标SMT2输出文件路径
+ * @throws std::runtime_error 若文件无法打开或写入失败
+ */
+void Smt2Emitter::emit_bad_to_file(const Module &m, int64_t bad_index,
+                                   const std::string &path) {
+  std::ofstream file(path);
+  if (!file.is_open())
+    throw std::runtime_error("Cannot open output file: " + path);
+
+  NameMap names = build_node_names(m);
+
+  file << "(set-logic QF_BV)\n";
+  file << "(set-info :status unknown)\n";
+
+  for (int64_t ir_id : m.inputs) {
+    const Node &n = m.nodes[ir_id];
+    auto it = names.find(ir_id);
+    if (it == names.end()) {
+      throw std::runtime_error("Input node " + std::to_string(ir_id) +
+                               " missing SMT2 name");
+    }
+    file << "(declare-const " << it->second << " (_ BitVec " << n.width
+         << "))\n";
+  }
+
+  for (const Node &n : m.nodes) {
+    switch (n.kind) {
+    case NodeKind::Input:
+    case NodeKind::Const:
+    case NodeKind::Constraint:
+    case NodeKind::Bad:
+      continue;
+    default:
+      this->emit_node_definition(file, m, n, names);
+    }
+  }
+
+  this->emit_asserts(file, m, names, bad_index);
+  file << "(check-sat)\n";
 
   if (!file.good())
     throw std::runtime_error("Failed to write to output file: " + path);

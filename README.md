@@ -62,8 +62,11 @@ The unified test script supports multiple SMT2 solvers via `-s`:
 ## Usage
 
 ```bash
-# Load and emit SMT2 output
+# Default mode: each bad generates a separate file (_bad0.smt2, _bad1.smt2, ...)
 ./build/btor2rw <input.btor2> -o <output.smt2>
+
+# OR mode: combine all bads via OR into one assert in a single file
+./build/btor2rw --use-or-assert <input.btor2> -o <output.smt2>
 
 # Load only (print summary)
 ./build/btor2rw <input.btor2>
@@ -83,6 +86,7 @@ The unified test script supports multiple SMT2 solvers via `-s`:
 | `-o <file>` | Output SMT2 file path |
 | `-v`, `--verbose` | Enable verbose output (print all nodes) |
 | `--no-strict-smtlib` | Allow solver-extended constructs |
+| `--use-or-assert` | Combine all bads via OR into one assert (default: separate files per bad) |
 | `-h`, `--help` | Show help message |
 
 ### Strict SMT-LIB Mode
@@ -95,13 +99,25 @@ To allow solver-extended constructs like `bvredor` and `bvredand` (e.g., for Bit
 
 ### Output
 
-**Default mode** (summary only):
+**Default mode** (each bad → separate file):
 ```
 === BTOR2 Loaded Successfully ===
 Total nodes:    120371
 Inputs:         15
 Constraints:    1
-Bads:           1
+Bads:           3
+SMT2 emitted to: out_bad0.smt2
+SMT2 emitted to: out_bad1.smt2
+SMT2 emitted to: out_bad2.smt2
+```
+
+**OR mode** (`--use-or-assert`, single file):
+```
+=== BTOR2 Loaded Successfully ===
+Total nodes:    120371
+Inputs:         15
+Constraints:    1
+Bads:           3
 SMT2 emitted to: out.smt2
 ```
 
@@ -112,7 +128,7 @@ Total nodes:    5
 Inputs:         2
 Constraints:    1
 Bads:           1
-SMT2 emitted to: out.smt2
+SMT2 emitted to: out_bad0.smt2
 
 === Nodes ===
 Node 0: Input [width=1] name=input1 (btor2_id=2)

@@ -9,6 +9,7 @@
 
 struct Smt2EmitterOptions {
   bool strict_smtlib = true;
+  bool use_or_assert = false;
 };
 
 using NameMap = std::unordered_map<int64_t, std::string>;
@@ -19,13 +20,16 @@ public:
   void emit_to_file(const Module &m, const std::string &path);
   void emit_to_stream(const Module &m, std::ostream &out);
   std::string emit_to_string(const Module &m);
+  void emit_bad_to_file(const Module &m, int64_t bad_index,
+                        const std::string &path);
 
 private:
   void emit_rhs(std::ostream &out, const Module &m, const Node &n,
                 const NameMap &names);
   void emit_node_definition(std::ostream &out, const Module &m, const Node &n,
                             const NameMap &names);
-  void emit_asserts(std::ostream &out, const Module &m, const NameMap &names);
+  void emit_asserts(std::ostream &out, const Module &m, const NameMap &names,
+                    int64_t bad_filter = -1);
 
   Smt2EmitterOptions d_options;
 };

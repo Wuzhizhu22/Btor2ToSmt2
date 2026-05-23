@@ -13,7 +13,6 @@ Smt2Emitter::Smt2Emitter(Smt2EmitterOptions options) : d_options(options) {}
 
 /**
  * @brief
- * @brief
  * 名称安全化函数，在项目整体流程中负责将原始节点名称转换为合法且唯一的SMT2标识符
  *
  * 该函数属于Smt2Emitter文件中的基础辅助函数，位于SMT2文本生成流程的最前端。
@@ -42,10 +41,10 @@ static std::string make_safe_name(const std::string &raw, int64_t id,
     base = raw;
     for (auto &c : base) {
       bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                (c >= '0' && c <= '9') || c == '~' || c == '!' ||
-                c == '$' || c == '%' || c == '^' || c == '&' || c == '*' ||
-                c == '_' || c == '-' || c == '+' || c == '=' || c == '<' ||
-                c == '>' || c == '?' || c == '/';
+                (c >= '0' && c <= '9') || c == '~' || c == '!' || c == '$' ||
+                c == '%' || c == '^' || c == '&' || c == '*' || c == '_' ||
+                c == '-' || c == '+' || c == '=' || c == '<' || c == '>' ||
+                c == '?' || c == '/';
       if (!ok)
         c = '_';
     }
@@ -620,7 +619,7 @@ void Smt2Emitter::emit_asserts(std::ostream &out, const Module &m,
       emit_node_ref(out, m, n.operands[0], names);
       out << " #b1))\n";
     }
-  } else if (d_options.use_or_assert && m.bads.size() > 1) {
+  } else if (!d_options.no_or_assert && m.bads.size() > 1) {
     out << "(assert (or";
     for (int64_t ir_id : m.bads) {
       const Node &n = m.nodes[ir_id];

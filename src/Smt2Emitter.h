@@ -9,7 +9,7 @@
 
 struct Smt2EmitterOptions {
   bool strict_smtlib = true;
-  bool use_or_assert = false;
+  bool no_or_assert = false;
 };
 
 using NameMap = std::unordered_map<int64_t, std::string>;

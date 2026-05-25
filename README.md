@@ -97,6 +97,47 @@ By default, the converter emits only standard SMT-LIB `QF_BV` constructs for max
 
 To allow solver-extended constructs like `bvredor` and `bvredand` (e.g., for Bitwuzla), use the `--no-strict-smtlib` flag.
 
+### Symbol Comment Preservation
+
+BTOR2 property lines may carry optional symbols, for example:
+
+```btor2
+7610 bad 7609 target_property
+7611 constraint 7510 valid_env
+```
+
+The converter preserves these symbols as SMT-LIB comments (lines starting with `;`), which do not affect solver semantics but keep the original BTOR2 source information for debugging and result traceability.
+
+**SMT2 output example:**
+
+```smt2
+; constraint btor2_id=7611 symbol=valid_env operand_ir=7509
+(assert (= n7510 #b1))
+; bad btor2_id=7610 symbol=target_property operand_ir=7609
+(assert (= n7609 #b1))
+```
+
+**OR-combined mode** (default, multiple bads → single assert):
+
+```smt2
+; bad properties combined by OR:
+;   bad[0] btor2_id=7610 symbol=target_property
+;   bad[1] btor2_id=7620 symbol=another_property
+(assert (or
+  (= n7609 #b1)
+  (= n7619 #b1)))
+```
+
+**`--no-or-assert` mode** — each `_badN.smt2` file includes the corresponding symbol comment:
+
+```smt2
+; bad btor2_id=7610 symbol=target_property operand_ir=7609
+(assert (= n7609 #b1))
+(check-sat)
+```
+
+Without a symbol on the BTOR2 line, the comment omits the `symbol=` field but still records the `btor2_id` and `operand_ir` for traceability.
+
 ### Output
 
 **Default mode** (OR all bads, single file):
@@ -228,8 +269,8 @@ Adjust with `-b` if needed.
 | `redxor` | Handled via extract/xor | |
 | `rol` | `bvor (bvshl ...) (bvlshr ...)` | |
 | `ror` | `bvor (bvlshr ...) (bvshl ...)` | |
-| `constraint` | `(assert (= <expr> #b1))` | |
-| `bad` | `(assert (= <expr> #b1))` | |
+| `constraint` | `(assert (= <expr> #b1))` | Symbol preserved as `; constraint` comment |
+| `bad` | `(assert (= <expr> #b1))` | Symbol preserved as `; bad` comment |
 
 ## Unsupported Features
 

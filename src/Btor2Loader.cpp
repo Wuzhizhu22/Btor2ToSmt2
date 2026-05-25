@@ -474,6 +474,9 @@ Module Btor2Loader::load_from_file(const std::string &path) {
       n.operands.push_back(operand_ir);
       n.src_btor2_id = line_id;
 
+      if (tokens.size() >= 4)
+        n.name = tokens[3];
+
       int64_t ir_id = add_node(n);
       m.btor2_to_ir[line_id] = ir_id;
       m.bads.push_back(ir_id);
@@ -490,6 +493,9 @@ Module Btor2Loader::load_from_file(const std::string &path) {
       n.width = m.nodes[operand_ir].width;
       n.operands.push_back(operand_ir);
       n.src_btor2_id = line_id;
+
+      if (tokens.size() >= 4)
+        n.name = tokens[3];
 
       int64_t ir_id = add_node(n);
       m.btor2_to_ir[line_id] = ir_id;

@@ -84,9 +84,11 @@ int main(int argc, char **argv) {
       std::cerr << "  -v, --verbose         Enable verbose output" << std::endl;
       std::cerr << "  --no-strict-smtlib    Allow solver-extended constructs"
                 << std::endl;
-      std::cerr << "  --no-or-assert        Emit each bad property to a separate file (default: combine via OR)"
+      std::cerr << "  --no-or-assert        Emit each bad property to a "
+                   "separate file (default: combine via OR)"
                 << std::endl;
-      std::cerr << "  -h, --help            Show this help message" << std::endl;
+      std::cerr << "  -h, --help            Show this help message"
+                << std::endl;
       return 0;
     } else if (input_file.empty()) {
       input_file = arg;
@@ -125,8 +127,8 @@ int main(int argc, char **argv) {
       if (!m.bads.empty()) {
         for (size_t i = 0; i < m.bads.size(); i++) {
           std::string bad_file = make_bad_filename(base_out, i);
-          Smt2Emitter emitter({.strict_smtlib = strict_smtlib,
-                               .no_or_assert = true});
+          Smt2Emitter emitter(
+              {.strict_smtlib = strict_smtlib, .no_or_assert = true});
           emitter.emit_bad_to_file(m, i, bad_file);
           std::cerr << "SMT2 emitted to: " << bad_file << std::endl;
         }

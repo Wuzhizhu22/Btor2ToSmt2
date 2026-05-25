@@ -159,6 +159,36 @@ static bool is_smt_bool_kind(NodeKind k) {
          k == NodeKind::Neq || k == NodeKind::Iff || k == NodeKind::Implies;
 }
 
+/**
+ * @brief
+ * BTOR2符号注释输出函数，在项目整体流程中负责将constraint/bad节点的来源信息
+ * 以SMT-LIB行注释的形式保留在生成的SMT2文件中
+ *
+ * SMT-LIB中以分号开头的行注释不影响求解器语义，但可以保留原始BTOR2中的
+ * property名称和行号信息，便于调试、结果追踪和反查对应关系。
+ *
+ * 输出格式为：
+ *   ; <kind> btor2_id=<id> symbol=<name> operand_ir=<operand>
+ *
+ * 各个字段按需输出：btor2_id始终输出，symbol仅在有名称时输出，
+ * operand_ir仅在有操作数时输出。
+ *
+ * @param out  输出流，直接写入注释行
+ * @param kind property类型标签，如"bad"或"constraint"
+ * @param n    对应的IR节点，携带symbol名称、行号和操作数信息
+ */
+static void emit_source_comment(std::ostream &out, const char *kind,
+                                const Node &n) {
+  out << "; " << kind;
+  if (n.src_btor2_id >= 0)
+    out << " btor2_id=" << n.src_btor2_id;
+  if (!n.name.empty())
+    out << " symbol=" << n.name;
+  if (!n.operands.empty())
+    out << " operand_ir=" << n.operands[0];
+  out << "\n";
+}
+
 /* ========================================================================
  *  DAG output helpers
  * ======================================================================== */
@@ -592,11 +622,15 @@ void Smt2Emitter::emit_node_definition(std::ostream &out, const Module &m,
  * 这样可以保持与项目当前“比较结果和谓词结果均以BV1承载”的内部表示一致，
  * 避免在顶层断言时混入新的Bool/BV桥接策略。
  *
+ * 此外，该函数会在每个assert前输出SMT-LIB行注释，保留BTOR2原始行号、
+ * property名称和操作数等来源信息，便于调试和结果反查。
+ *
  * 该函数只负责输出顶层assert，不参与中间节点定义生成。
  *
- * @param out 输出流，直接写入assert语句
- * @param m 当前模块对象
- * @param names 节点名称映射表
+ * @param out       输出流，直接写入assert语句
+ * @param m         当前模块对象
+ * @param names     节点名称映射表
+ * @param bad_filter 当>=0时仅输出指定索引的单个bad；默认-1表示输出全部bad
  */
 void Smt2Emitter::emit_asserts(std::ostream &out, const Module &m,
                                const NameMap &names, int64_t bad_filter) {
@@ -604,6 +638,7 @@ void Smt2Emitter::emit_asserts(std::ostream &out, const Module &m,
     const Node &n = m.nodes[ir_id];
     if (n.operands.empty())
       continue;
+    emit_source_comment(out, "constraint", n);
     out << "(assert (= ";
     emit_node_ref(out, m, n.operands[0], names);
     out << " #b1))\n";
@@ -615,11 +650,22 @@ void Smt2Emitter::emit_asserts(std::ostream &out, const Module &m,
   if (bad_filter >= 0) {
     const Node &n = m.nodes[m.bads[bad_filter]];
     if (!n.operands.empty()) {
+      emit_source_comment(out, "bad", n);
       out << "(assert (= ";
       emit_node_ref(out, m, n.operands[0], names);
       out << " #b1))\n";
     }
   } else if (!d_options.no_or_assert && m.bads.size() > 1) {
+    out << "; bad properties combined by OR:\n";
+    int idx = 0;
+    for (int64_t ir_id : m.bads) {
+      const Node &n = m.nodes[ir_id];
+      out << ";   bad[" << idx << "] btor2_id=" << n.src_btor2_id;
+      if (!n.name.empty())
+        out << " symbol=" << n.name;
+      out << "\n";
+      ++idx;
+    }
     out << "(assert (or";
     for (int64_t ir_id : m.bads) {
       const Node &n = m.nodes[ir_id];
@@ -635,6 +681,7 @@ void Smt2Emitter::emit_asserts(std::ostream &out, const Module &m,
       const Node &n = m.nodes[ir_id];
       if (n.operands.empty())
         continue;
+      emit_source_comment(out, "bad", n);
       out << "(assert (= ";
       emit_node_ref(out, m, n.operands[0], names);
       out << " #b1))\n";
